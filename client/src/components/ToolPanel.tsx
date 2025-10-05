@@ -154,6 +154,22 @@ export function ToolPanel({ videoFilename, onVideoProcessed, onAddTextLayer }: T
     invert: "عكس الألوان",
   };
 
+  const filterCategories: Record<string, string[]> = {
+    "تحسينات": ["brightness", "contrast", "saturation", "sharpen"],
+    "تأثيرات فنية": ["grayscale", "sepia", "invert", "blur"],
+  };
+
+  const filterDescriptions: Record<string, string> = {
+    brightness: "يزيد أو يقلل سطوع الفيديو",
+    contrast: "يحسّن التباين بين المناطق الفاتحة والداكنة",
+    saturation: "يتحكم في كثافة الألوان",
+    blur: "يضيف تمويه ناعم للفيديو",
+    sharpen: "يزيد حدة ووضوح التفاصيل",
+    grayscale: "يحوّل الفيديو إلى أبيض وأسود",
+    sepia: "يضيف تأثير كلاسيكي بني داكن",
+    invert: "يعكس ألوان الفيديو",
+  };
+
   const transitionNameMap: Record<string, string> = {
     fade: "تلاشي",
     dissolve: "ذوبان",
@@ -244,27 +260,55 @@ export function ToolPanel({ videoFilename, onVideoProcessed, onAddTextLayer }: T
         <TabsContent value="effects" className="flex-1 m-0 p-4">
           <ScrollArea className="h-full -mx-4 px-4">
             <div className="space-y-4">
-              <div>
-                <h4 className="text-sm font-semibold mb-2">الفلاتر</h4>
-                <div className="space-y-2">
-                  {filters.map((filter) => (
-                    <div
-                      key={filter}
-                      className="p-3 border rounded-md hover-elevate cursor-pointer transition-all"
-                      onClick={() => {
-                        setSelectedFilter(filter);
-                        setFilterDialogOpen(true);
-                      }}
-                      data-testid={`filter-${filter}`}
-                    >
-                      <p className="text-sm font-medium">
-                        {filterNameMap[filter] || filter}
-                      </p>
-                      <span className="text-xs text-muted-foreground">فلتر</span>
-                    </div>
-                  ))}
+              {Object.entries(filterCategories).map(([category, categoryFilters]) => (
+                <div key={category}>
+                  <h4 className="text-sm font-semibold mb-3 text-primary">{category}</h4>
+                  <div className="space-y-2">
+                    {categoryFilters.filter(f => filters.includes(f)).map((filter) => (
+                      <div
+                        key={filter}
+                        className="p-3 border rounded-lg hover-elevate cursor-pointer transition-all bg-card hover:bg-accent/50"
+                        onClick={() => {
+                          setSelectedFilter(filter);
+                          setFilterDialogOpen(true);
+                        }}
+                        data-testid={`filter-${filter}`}
+                      >
+                        <p className="text-sm font-semibold mb-1">
+                          {filterNameMap[filter] || filter}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {filterDescriptions[filter] || "فلتر"}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ))}
+
+              {filters.filter(f => !Object.values(filterCategories).flat().includes(f)).length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-3">أخرى</h4>
+                  <div className="space-y-2">
+                    {filters.filter(f => !Object.values(filterCategories).flat().includes(f)).map((filter) => (
+                      <div
+                        key={filter}
+                        className="p-3 border rounded-md hover-elevate cursor-pointer transition-all"
+                        onClick={() => {
+                          setSelectedFilter(filter);
+                          setFilterDialogOpen(true);
+                        }}
+                        data-testid={`filter-${filter}`}
+                      >
+                        <p className="text-sm font-medium">
+                          {filterNameMap[filter] || filter}
+                        </p>
+                        <span className="text-xs text-muted-foreground">فلتر</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               <div>
                 <h4 className="text-sm font-semibold mb-2">الانتقالات</h4>
