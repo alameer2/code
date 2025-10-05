@@ -8,6 +8,8 @@ import { PropertiesPanel } from "@/components/PropertiesPanel";
 import LayerPanel, { Layer } from "@/components/LayerPanel";
 import { ExportDialog } from "@/components/ExportDialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useAutosave } from "@/hooks/use-autosave";
+import { Badge } from "@/components/ui/badge";
 import {
   ArrowRight,
   Save,
@@ -37,9 +39,49 @@ export default function Editor() {
   const [showLayers, setShowLayers] = useState(true);
   const [layers, setLayers] = useState<Layer[]>([]);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
   const urlParams = new URLSearchParams(window.location.search);
   const projectId = urlParams.get("id");
+
+  const handleSave = async () => {
+    if (!projectId || !project) return;
+    
+    try {
+      await fetch(`/api/projects/${projectId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: project.title,
+          description: project.description,
+          duration: project.duration,
+          updatedAt: new Date().toISOString(),
+        }),
+      });
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error('فشل الحفظ:', error);
+      throw error;
+    }
+  };
+
+  const { lastSaveTime, manualSave } = useAutosave({
+    onSave: handleSave,
+    interval: 30000,
+    enabled: hasUnsavedChanges && !!projectId,
+  });
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
   
   const { data: project, isLoading: projectLoading, error: projectError } = useQuery<Project>({
     queryKey: ["/api/projects", projectId],
@@ -163,12 +205,24 @@ export default function Editor() {
           >
             <Redo className="h-4 w-4" />
           </Button>
+          
+          {hasUnsavedChanges ? (
+            <Badge variant="secondary" className="mr-2">
+              غير محفوظ
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="mr-2 text-green-600 border-green-600">
+              محفوظ ✓
+            </Badge>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
+            onClick={manualSave}
+            disabled={!hasUnsavedChanges}
             data-testid="button-save"
           >
             <Save className="h-4 w-4 ml-2" />
@@ -232,6 +286,7 @@ export default function Editor() {
               };
               setLayers([...layers, newLayer]);
               setSelectedLayerId(newLayer.id);
+              setHasUnsavedChanges(true);
             }}
           />
         )}
