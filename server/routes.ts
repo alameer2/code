@@ -56,13 +56,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/projects/:id", async (req, res) => {
     try {
-      const project = await storage.updateProject(req.params.id, req.body);
+      const validatedData = insertProjectSchema.partial().parse(req.body);
+      const project = await storage.updateProject(req.params.id, validatedData);
       if (!project) {
         return res.status(404).json({ message: "المشروع غير موجود" });
       }
       res.json(project);
     } catch (error) {
-      res.status(500).json({ message: "خطأ في تحديث المشروع" });
+      res.status(400).json({ message: "بيانات غير صحيحة" });
     }
   });
 

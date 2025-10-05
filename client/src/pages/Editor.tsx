@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { Timeline } from "@/components/Timeline";
@@ -24,13 +24,79 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useQuery } from "@tanstack/react-query";
+import type { Project, File as ProjectFile } from "@shared/schema";
 
 export default function Editor() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [exportOpen, setExportOpen] = useState(false);
   const [showSubtitles, setShowSubtitles] = useState(true);
   const [showTools, setShowTools] = useState(true);
   const [showProperties, setShowProperties] = useState(true);
+  
+  const urlParams = new URLSearchParams(window.location.search);
+  const projectId = urlParams.get("id");
+  
+  const { data: project, isLoading: projectLoading, error: projectError } = useQuery<Project>({
+    queryKey: ["/api/projects", projectId],
+    queryFn: async () => {
+      const res = await fetch(`/api/projects/${projectId}`);
+      if (!res.ok) throw new Error("Failed to fetch project");
+      return res.json();
+    },
+    enabled: !!projectId,
+  });
+
+  const { data: files = [], isLoading: filesLoading } = useQuery<ProjectFile[]>({
+    queryKey: ["/api/projects", projectId, "files"],
+    queryFn: async () => {
+      const res = await fetch(`/api/projects/${projectId}/files`);
+      if (!res.ok) throw new Error("Failed to fetch files");
+      return res.json();
+    },
+    enabled: !!projectId,
+  });
+
+  useEffect(() => {
+    if (!projectId) {
+      setLocation("/");
+    }
+  }, [projectId, setLocation]);
+
+  if (!projectId) {
+    return null;
+  }
+
+  if (projectLoading || filesLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">جاري تحميل المشروع...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (projectError || !project) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="text-center max-w-md">
+          <div className="bg-destructive/10 p-4 rounded-full inline-block mb-4">
+            <Film className="h-12 w-12 text-destructive" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">المشروع غير موجود</h2>
+          <p className="text-muted-foreground mb-4">
+            لم نتمكن من العثور على المشروع المطلوب
+          </p>
+          <Button onClick={() => setLocation("/")}>
+            <ArrowRight className="h-4 w-4 ml-2" />
+            العودة للرئيسية
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -50,9 +116,11 @@ export default function Editor() {
           </div>
           <div>
             <h1 className="text-sm font-semibold">
-              فيديو ترويجي للمنتج الجديد
+              {project?.title || "جاري التحميل..."}
             </h1>
-            <p className="text-xs text-muted-foreground">تم الحفظ تلقائياً</p>
+            <p className="text-xs text-muted-foreground">
+              {files.length > 0 ? `${files.length} ملف` : "بدون ملفات"}
+            </p>
           </div>
         </div>
 
