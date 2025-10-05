@@ -7,6 +7,7 @@ dependencies = [
     "aiofiles>=24.1.0",
     "arabic-reshaper>=3.0.0",
     "fastapi>=0.118.0",
+    "gdown>=5.2.0",
     "moviepy>=2.2.1",
     "numpy>=2.3.3",
     "pillow>=11.3.0",
@@ -16,4 +17,5 @@ dependencies = [
     "python-multipart>=0.0.20",
     "scipy>=1.16.2",
     "uvicorn>=0.37.0",
+    "yt-dlp>=2025.9.26",
 ]
