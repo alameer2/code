@@ -297,10 +297,6 @@ export default function Dashboard() {
       <UploadDialog
         open={uploadOpen}
         onOpenChange={setUploadOpen}
-        onUpload={(file, type) => {
-          console.log("تم رفع الملف:", file, type);
-          setLocation("/editor");
-        }}
       />
     </div>
   );

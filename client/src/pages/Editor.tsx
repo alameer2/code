@@ -113,7 +113,7 @@ export default function Editor() {
     if (files.length > 0) {
       const newLayers: Layer[] = files.map((file, index) => ({
         id: `layer_${file.id}`,
-        name: file.filename || `طبقة ${index + 1}`,
+        name: file.name || `طبقة ${index + 1}`,
         type: file.type as 'video' | 'text' | 'image' | 'sticker',
         visible: true,
         locked: false,
