@@ -203,7 +203,7 @@ export default function Editor() {
 
             <div className="flex-1 p-6 flex items-center justify-center bg-muted/20 overflow-auto">
               <div className="w-full max-w-4xl">
-                <VideoPlayer />
+                <VideoPlayer src={files.find(f => f.type === "video")?.url} />
               </div>
             </div>
           </div>
