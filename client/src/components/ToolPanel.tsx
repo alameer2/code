@@ -329,7 +329,7 @@ export function ToolPanel({ videoFilename, onVideoProcessed, onAddTextLayer }: T
                 <div key={category}>
                   <h4 className="text-sm font-semibold mb-3 text-primary">{category}</h4>
                   <div className="space-y-2">
-                    {categoryFilters.filter(f => filters.includes(f)).map((filter) => (
+                    {categoryFilters.filter(f => filters && filters.includes(f)).map((filter) => (
                       <div
                         key={filter}
                         className="p-3 border rounded-lg hover-elevate cursor-pointer transition-all bg-card hover:bg-accent/50"
@@ -351,11 +351,11 @@ export function ToolPanel({ videoFilename, onVideoProcessed, onAddTextLayer }: T
                 </div>
               ))}
 
-              {filters.filter(f => !Object.values(filterCategories).flat().includes(f)).length > 0 && (
+              {filters && filters.filter(f => f && !Object.values(filterCategories).flat().includes(f)).length > 0 && (
                 <div>
                   <h4 className="text-sm font-semibold mb-3">أخرى</h4>
                   <div className="space-y-2">
-                    {filters.filter(f => !Object.values(filterCategories).flat().includes(f)).map((filter) => (
+                    {filters.filter(f => f && !Object.values(filterCategories).flat().includes(f)).map((filter) => (
                       <div
                         key={filter}
                         className="p-3 border rounded-md hover-elevate cursor-pointer transition-all"
@@ -378,7 +378,7 @@ export function ToolPanel({ videoFilename, onVideoProcessed, onAddTextLayer }: T
               <div>
                 <h4 className="text-sm font-semibold mb-2">الانتقالات</h4>
                 <div className="space-y-2">
-                  {transitions.map((transition) => (
+                  {transitions && transitions.map((transition) => (
                     <div
                       key={transition}
                       className="p-3 border rounded-md hover-elevate cursor-pointer transition-all"
