@@ -1,5 +1,7 @@
-import { type User, type InsertUser, type Project, type InsertProject, type File, type InsertFile } from "@shared/schema";
+import { type User, type InsertUser, type Project, type InsertProject, type File, type InsertFile, users, projects, files } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { db } from "./db";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -115,4 +117,68 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  async getUser(id: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result[0];
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.username, username));
+    return result[0];
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(insertUser).returning();
+    return result[0];
+  }
+
+  async getAllProjects(): Promise<Project[]> {
+    return await db.select().from(projects).orderBy(desc(projects.updatedAt));
+  }
+
+  async getProject(id: string): Promise<Project | undefined> {
+    const result = await db.select().from(projects).where(eq(projects.id, id));
+    return result[0];
+  }
+
+  async createProject(insertProject: InsertProject): Promise<Project> {
+    const result = await db.insert(projects).values(insertProject).returning();
+    return result[0];
+  }
+
+  async updateProject(id: string, updates: Partial<InsertProject>): Promise<Project | undefined> {
+    const result = await db.update(projects)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(projects.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteProject(id: string): Promise<boolean> {
+    await db.delete(files).where(eq(files.projectId, id));
+    const result = await db.delete(projects).where(eq(projects.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getProjectFiles(projectId: string): Promise<File[]> {
+    return await db.select().from(files).where(eq(files.projectId, projectId));
+  }
+
+  async getFile(id: string): Promise<File | undefined> {
+    const result = await db.select().from(files).where(eq(files.id, id));
+    return result[0];
+  }
+
+  async createFile(insertFile: InsertFile): Promise<File> {
+    const result = await db.insert(files).values(insertFile).returning();
+    return result[0];
+  }
+
+  async deleteFile(id: string): Promise<boolean> {
+    const result = await db.delete(files).where(eq(files.id, id)).returning();
+    return result.length > 0;
+  }
+}
+
+export const storage = process.env.DATABASE_URL ? new DatabaseStorage() : new MemStorage();

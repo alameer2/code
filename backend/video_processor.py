@@ -1,4 +1,4 @@
-from moviepy.editor import VideoFileClip, concatenate_videoclips, CompositeVideoClip
+from moviepy import VideoFileClip, concatenate_videoclips, CompositeVideoClip
 from pathlib import Path
 import os
 

@@ -1,4 +1,4 @@
-from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
+from moviepy import VideoFileClip, TextClip, CompositeVideoClip
 from arabic_reshaper import reshape
 from bidi.algorithm import get_display
 from pathlib import Path
