@@ -332,10 +332,70 @@ export function ToolPanel({ videoFilename, onVideoProcessed, onAddTextLayer }: T
         </TabsContent>
 
         <TabsContent value="audio" className="flex-1 m-0 p-4">
-          <div className="text-center text-muted-foreground py-8">
-            <Music className="h-12 w-12 mx-auto mb-2" />
-            <p className="text-sm">مكتبة الموسيقى</p>
-          </div>
+          <ScrollArea className="h-full -mx-4 px-4">
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-semibold mb-3 text-primary">موسيقى خلفية</h4>
+                <div className="space-y-2">
+                  {[
+                    { id: 1, name: "حماسية 1", duration: "2:30", category: "حماسية" },
+                    { id: 2, name: "هادئة 1", duration: "3:15", category: "هادئة" },
+                    { id: 3, name: "سعيدة 1", duration: "1:45", category: "سعيدة" },
+                    { id: 4, name: "حزينة 1", duration: "2:50", category: "حزينة" },
+                  ].map((track) => (
+                    <div
+                      key={track.id}
+                      className="p-3 border rounded-lg hover-elevate cursor-pointer transition-all bg-card hover:bg-accent/50 group"
+                      data-testid={`audio-track-${track.id}`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-semibold flex items-center gap-2">
+                          <Music className="h-4 w-4 text-green-500" />
+                          {track.name}
+                        </p>
+                        <span className="text-xs font-mono text-muted-foreground">
+                          {track.duration}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {track.category}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold mb-3 text-primary">مؤثرات صوتية</h4>
+                <div className="space-y-2">
+                  {[
+                    { id: 5, name: "تصفيق", duration: "0:03", category: "مؤثر" },
+                    { id: 6, name: "جرس", duration: "0:02", category: "مؤثر" },
+                    { id: 7, name: "ضحك", duration: "0:05", category: "مؤثر" },
+                  ].map((sound) => (
+                    <div
+                      key={sound.id}
+                      className="p-3 border rounded-lg hover-elevate cursor-pointer transition-all bg-card hover:bg-accent/50"
+                      data-testid={`sound-effect-${sound.id}`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-semibold flex items-center gap-2">
+                          <Music className="h-4 w-4 text-blue-500" />
+                          {sound.name}
+                        </p>
+                        <span className="text-xs font-mono text-muted-foreground">
+                          {sound.duration}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {sound.category}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
         </TabsContent>
 
         <TabsContent value="stickers" className="flex-1 m-0 p-4">
