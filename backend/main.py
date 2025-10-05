@@ -407,7 +407,8 @@ async def download_file(filename: str):
 async def import_from_youtube(
     url: str = Form(...),
     download_subtitles: bool = Form(True),
-    subtitle_lang: str = Form("ar")
+    subtitle_lang: str = Form("ar"),
+    quality: str = Form("best")
 ):
     """تنزيل فيديو من YouTube مع الترجمات"""
     try:
@@ -424,8 +425,13 @@ async def import_from_youtube(
         video_path = UPLOAD_DIR / video_filename
         subtitle_path = UPLOAD_DIR / subtitle_filename
         
+        if quality == "best":
+            format_string = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
+        else:
+            format_string = f'bestvideo[height<={quality}][ext=mp4]+bestaudio[ext=m4a]/best[height<={quality}][ext=mp4]/best'
+        
         ydl_opts = {
-            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+            'format': format_string,
             'outtmpl': str(video_path.with_suffix('')),
             'merge_output_format': 'mp4',
         }

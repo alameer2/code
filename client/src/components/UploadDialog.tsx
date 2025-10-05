@@ -37,6 +37,7 @@ export function UploadDialog({ open, onOpenChange, projectId }: UploadDialogProp
   const [progress, setProgress] = useState(0);
   const [downloadSubtitles, setDownloadSubtitles] = useState(true);
   const [subtitleLang, setSubtitleLang] = useState("ar");
+  const [videoQuality, setVideoQuality] = useState("best");
   const [selectedProjectFile, setSelectedProjectFile] = useState<string>("");
   const { toast } = useToast();
 
@@ -103,11 +104,12 @@ export function UploadDialog({ open, onOpenChange, projectId }: UploadDialogProp
   });
 
   const importFromYoutubeMutation = useMutation({
-    mutationFn: async (data: { url: string; downloadSubtitles: boolean; subtitleLang: string }) => {
+    mutationFn: async (data: { url: string; downloadSubtitles: boolean; subtitleLang: string; quality: string }) => {
       const formData = new FormData();
       formData.append("url", data.url);
       formData.append("download_subtitles", data.downloadSubtitles.toString());
       formData.append("subtitle_lang", data.subtitleLang);
+      formData.append("quality", data.quality);
 
       const res = await fetch("http://localhost:8000/api/import/youtube", {
         method: "POST",
@@ -228,6 +230,7 @@ export function UploadDialog({ open, onOpenChange, projectId }: UploadDialogProp
         url,
         downloadSubtitles,
         subtitleLang,
+        quality: videoQuality,
       });
     }
   };
@@ -371,6 +374,24 @@ export function UploadDialog({ open, onOpenChange, projectId }: UploadDialogProp
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="video-quality">جودة الفيديو</Label>
+              <Select value={videoQuality} onValueChange={setVideoQuality}>
+                <SelectTrigger id="video-quality">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="best">أفضل جودة متاحة</SelectItem>
+                  <SelectItem value="2160">4K (2160p)</SelectItem>
+                  <SelectItem value="1440">2K (1440p)</SelectItem>
+                  <SelectItem value="1080">Full HD (1080p)</SelectItem>
+                  <SelectItem value="720">HD (720p)</SelectItem>
+                  <SelectItem value="480">SD (480p)</SelectItem>
+                  <SelectItem value="360">360p</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex items-center space-x-2 space-x-reverse">
