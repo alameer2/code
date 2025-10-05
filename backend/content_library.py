@@ -1,6 +1,4 @@
 from moviepy import VideoFileClip, TextClip, CompositeVideoClip, ImageClip
-from moviepy.video.fx import fadein, fadeout, resize, rotate
-from moviepy.video import fx
 from pathlib import Path
 import os
 import numpy as np
@@ -67,8 +65,8 @@ class ContentLibrary:
     def apply_fade_transition(self, clip1_path, clip2_path, output_path, duration):
         """انتقال تلاشي"""
         with VideoFileClip(clip1_path) as clip1, VideoFileClip(clip2_path) as clip2:
-            clip1_with_fadeout = clip1.with_effects([fadeout(duration)])
-            clip2_with_fadein = clip2.with_effects([fadein(duration)])
+            clip1_with_fadeout = clip1.with_effects([lambda c: c.with_opacity(lambda t: 1 - t/duration)])
+            clip2_with_fadein = clip2.with_effects([lambda c: c.with_opacity(lambda t: t/duration)])
             clip2_with_fadein = clip2_with_fadein.with_start(clip1.duration - duration)
             
             final = CompositeVideoClip([clip1_with_fadeout, clip2_with_fadein])
@@ -115,8 +113,8 @@ class ContentLibrary:
             def zoom_effect(t):
                 return 1 + (t / duration) * 0.5
             
-            clip1_zoomed = clip1.with_effects([resize(lambda t: zoom_effect(t))])
-            clip2_with_fadein = clip2.with_effects([fadein(duration)])
+            clip1_zoomed = clip1.resized(lambda t: zoom_effect(t))
+            clip2_with_fadein = clip2.with_effects([lambda c: c.with_opacity(lambda t: t/duration)])
             clip2_with_fadein = clip2_with_fadein.with_start(clip1.duration - duration)
             
             final = CompositeVideoClip([clip1_zoomed, clip2_with_fadein])
