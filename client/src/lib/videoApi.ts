@@ -24,7 +24,7 @@ export class VideoAPI {
     const formData = new FormData();
     formData.append('file', file);
     
-    const response = await fetch(`${BACKEND_URL}/api/upload`, {
+    const response = await fetch(`${BACKEND_URL}/api/video/upload`, {
       method: 'POST',
       body: formData,
     });
@@ -74,10 +74,10 @@ export class VideoAPI {
     outputFilename: string
   ): Promise<VideoProcessResult> {
     const formData = new FormData();
-    filenames.forEach(f => formData.append('filenames', f));
+    formData.append('filenames', filenames.join(','));
     formData.append('output_filename', outputFilename);
 
-    const response = await fetch(`${BACKEND_URL}/api/video/merge`, {
+    const response = await fetch(`${BACKEND_URL}/api/video/concatenate`, {
       method: 'POST',
       body: formData,
     });
@@ -139,7 +139,7 @@ export class VideoAPI {
     formData.append('color', options.color || 'white');
     formData.append('position', options.position || 'bottom');
 
-    const response = await fetch(`${BACKEND_URL}/api/subtitles/add`, {
+    const response = await fetch(`${BACKEND_URL}/api/subtitle/add-to-video`, {
       method: 'POST',
       body: formData,
     });
@@ -329,9 +329,9 @@ export class VideoAPI {
     return `${BACKEND_URL}/api/download/${filename}`;
   }
 
-  static async checkHealth(): Promise<{ status: string }> {
+  static async checkHealth(): Promise<{ status: string; ffmpeg_installed?: boolean; python_version?: string }> {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/health`);
+      const response = await fetch(`${BACKEND_URL}/health`);
       return response.json();
     } catch (error) {
       return { status: 'error' };

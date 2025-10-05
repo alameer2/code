@@ -16,7 +16,7 @@ class VideoProcessor:
             output_path = self.processed_dir / output_filename
             
             with VideoFileClip(str(input_path)) as video:
-                trimmed = video.subclip(start_time, end_time)
+                trimmed = video.subclipped(start_time, end_time)
                 trimmed.write_videofile(
                     str(output_path),
                     codec='libx264',
@@ -73,7 +73,7 @@ class VideoProcessor:
             
             with VideoFileClip(str(input_path)) as video:
                 if speed_factor != 1.0:
-                    new_video = video.fx(lambda clip: clip.speedx(speed_factor))
+                    new_video = video.with_speed_scaled(speed_factor)
                 else:
                     new_video = video
                 
@@ -100,7 +100,7 @@ class VideoProcessor:
             output_path = self.processed_dir / output_filename
             
             with VideoFileClip(str(input_path)) as video:
-                rotated = video.rotate(angle)
+                rotated = video.rotated(angle)
                 rotated.write_videofile(
                     str(output_path),
                     codec='libx264',
@@ -124,7 +124,7 @@ class VideoProcessor:
             output_path = self.processed_dir / output_filename
             
             with VideoFileClip(str(input_path)) as video:
-                resized = video.resize((width, height))
+                resized = video.resized(newsize=(width, height))
                 resized.write_videofile(
                     str(output_path),
                     codec='libx264',

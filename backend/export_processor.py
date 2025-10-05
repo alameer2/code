@@ -71,7 +71,7 @@ class ExportProcessor:
                     
                     # تصغير/تكبير الفيديو
                     if new_width != video.w or new_height != video.h:
-                        video_resized = video.resize((new_width, new_height))
+                        video_resized = video.resized((new_width, new_height))
                     else:
                         video_resized = video
                 else:
@@ -136,7 +136,7 @@ class ExportProcessor:
                     return {"success": False, "error": "الملف غير موجود"}
             
             with VideoFileClip(str(input_path)) as video:
-                resized = video.resize((width, height))
+                resized = video.resized((width, height))
                 
                 codec_map = {
                     "mp4": "libx264",

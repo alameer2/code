@@ -60,7 +60,7 @@ class SubtitleProcessor:
         input_filename: str, 
         subtitles: list, 
         output_filename: str,
-        font: str = "Arial",
+        font: str = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         fontsize: int = 24,
         color: str = "white",
         position: tuple = ('center', 'bottom'),
@@ -81,14 +81,25 @@ class SubtitleProcessor:
                 if self.is_arabic(text):
                     text = self.fix_arabic_text(text)
                 
-                txt_clip = TextClip(
-                    text,
-                    fontsize=fontsize,
-                    color=color,
-                    font=font,
-                    method='caption',
-                    size=(video.w - 100, None)
-                )
+                # Try using specified font, fallback to default if not found
+                try:
+                    txt_clip = TextClip(
+                        text=text,
+                        font=font,
+                        font_size=fontsize,
+                        color=color,
+                        method='caption',
+                        size=(video.w - 100, None)
+                    )
+                except:
+                    # Fallback to default font
+                    txt_clip = TextClip(
+                        text=text,
+                        font_size=fontsize,
+                        color=color,
+                        method='caption',
+                        size=(video.w - 100, None)
+                    )
                 
                 if bg_color:
                     txt_clip = txt_clip.on_color(
@@ -97,9 +108,9 @@ class SubtitleProcessor:
                         col_opacity=0.6
                     )
                 
-                txt_clip = txt_clip.set_start(subtitle['start'])
-                txt_clip = txt_clip.set_duration(subtitle['duration'])
-                txt_clip = txt_clip.set_position(position)
+                txt_clip = txt_clip.with_start(subtitle['start'])
+                txt_clip = txt_clip.with_duration(subtitle['duration'])
+                txt_clip = txt_clip.with_position(position)
                 
                 subtitle_clips.append(txt_clip)
             

@@ -1,6 +1,41 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { spawn } from "child_process";
+import { join } from "path";
+
+// Start FastAPI backend in development mode
+if (process.env.NODE_ENV === "development") {
+  const backendPath = join(process.cwd(), "backend");
+  const backend = spawn("python", ["main.py"], {
+    cwd: backendPath,
+    stdio: ["ignore", "pipe", "pipe"],
+    detached: false
+  });
+
+  backend.stdout?.on("data", (data) => {
+    console.log(`[Backend] ${data.toString().trim()}`);
+  });
+
+  backend.stderr?.on("data", (data) => {
+    console.error(`[Backend Error] ${data.toString().trim()}`);
+  });
+
+  backend.on("close", (code) => {
+    console.log(`[Backend] Process exited with code ${code}`);
+  });
+
+  process.on("SIGTERM", () => {
+    backend.kill();
+  });
+
+  process.on("SIGINT", () => {
+    backend.kill();
+    process.exit(0);
+  });
+
+  log("FastAPI backend started on port 8000");
+}
 
 const app = express();
 app.use(express.json());
