@@ -41,6 +41,11 @@ export function ToolPanel({ videoFilename, onVideoProcessed, onAddTextLayer }: T
   const [applying, setApplying] = useState(false);
   const [textDialogOpen, setTextDialogOpen] = useState(false);
   const [newTextContent, setNewTextContent] = useState("");
+  const [transitionDialogOpen, setTransitionDialogOpen] = useState(false);
+  const [selectedTransition, setSelectedTransition] = useState<string>("");
+  const [transitionDuration, setTransitionDuration] = useState([1.0]);
+  const [applyingTransition, setApplyingTransition] = useState(false);
+  const [applyingText, setApplyingText] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -122,7 +127,7 @@ export function ToolPanel({ videoFilename, onVideoProcessed, onAddTextLayer }: T
     }
   };
 
-  const handleAddText = () => {
+  const handleAddText = async () => {
     if (!newTextContent.trim()) {
       toast({
         title: "خطأ",
@@ -132,15 +137,75 @@ export function ToolPanel({ videoFilename, onVideoProcessed, onAddTextLayer }: T
       return;
     }
 
-    if (onAddTextLayer) {
-      onAddTextLayer(newTextContent);
-      toast({
-        title: "تم إضافة النص",
-        description: "تمت إضافة طبقة نص جديدة",
-      });
-      setNewTextContent("");
-      setTextDialogOpen(false);
+    if (!videoFilename) {
+      if (onAddTextLayer) {
+        onAddTextLayer(newTextContent);
+        toast({
+          title: "تم إضافة النص",
+          description: "تمت إضافة طبقة نص جديدة",
+        });
+        setNewTextContent("");
+        setTextDialogOpen(false);
+      }
+      return;
     }
+
+    setApplyingText(true);
+    try {
+      const outputFilename = `text_${Date.now()}.mp4`;
+      const result = await VideoAPI.addTextOverlay(
+        videoFilename,
+        outputFilename,
+        newTextContent,
+        {
+          position_x: 'center',
+          position_y: 'center',
+          fontsize: 50,
+          color: 'white',
+        }
+      );
+
+      if (result.success && result.output_file) {
+        toast({
+          title: "تم إضافة النص",
+          description: "تمت إضافة النص للفيديو بنجاح",
+        });
+        setNewTextContent("");
+        setTextDialogOpen(false);
+        if (onVideoProcessed) {
+          onVideoProcessed(result.output_file);
+        }
+      } else {
+        throw new Error(result.error || "فشل إضافة النص");
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "حدث خطأ";
+      toast({
+        title: "فشل إضافة النص",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setApplyingText(false);
+    }
+  };
+
+  const handleApplyTransition = async () => {
+    if (!videoFilename || !selectedTransition) {
+      toast({
+        title: "خطأ",
+        description: "يرجى تحديد فيديو وانتقال",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "تنبيه",
+      description: "الانتقالات تتطلب فيديوهين. الرجاء استخدام Timeline لدمج مقاطع متعددة.",
+      variant: "destructive",
+    });
+    setTransitionDialogOpen(false);
   };
 
   const filterNameMap: Record<string, string> = {
@@ -317,6 +382,10 @@ export function ToolPanel({ videoFilename, onVideoProcessed, onAddTextLayer }: T
                     <div
                       key={transition}
                       className="p-3 border rounded-md hover-elevate cursor-pointer transition-all"
+                      onClick={() => {
+                        setSelectedTransition(transition);
+                        setTransitionDialogOpen(true);
+                      }}
                       data-testid={`transition-${transition}`}
                     >
                       <p className="text-sm font-medium">
@@ -533,8 +602,52 @@ export function ToolPanel({ videoFilename, onVideoProcessed, onAddTextLayer }: T
             >
               إلغاء
             </Button>
-            <Button onClick={handleAddText}>
-              إضافة
+            <Button onClick={handleAddText} disabled={applyingText}>
+              {applyingText ? "جاري الإضافة..." : "إضافة"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={transitionDialogOpen} onOpenChange={setTransitionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تطبيق انتقال {transitionNameMap[selectedTransition] || selectedTransition}</DialogTitle>
+            <DialogDescription>
+              الانتقالات تعمل بين مقطعين فيديو. استخدم Timeline لدمج المقاطع أولاً.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>مدة الانتقال (بالثواني)</Label>
+              <div className="flex items-center gap-4">
+                <Slider
+                  value={transitionDuration}
+                  onValueChange={setTransitionDuration}
+                  min={0.5}
+                  max={3}
+                  step={0.1}
+                  className="flex-1"
+                  disabled={applyingTransition}
+                />
+                <span className="text-sm font-mono w-12 text-right">
+                  {transitionDuration[0].toFixed(1)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setTransitionDialogOpen(false)}
+              disabled={applyingTransition}
+            >
+              إلغاء
+            </Button>
+            <Button onClick={handleApplyTransition} disabled={applyingTransition || !videoFilename}>
+              {applyingTransition ? "جاري التطبيق..." : "تطبيق"}
             </Button>
           </DialogFooter>
         </DialogContent>
