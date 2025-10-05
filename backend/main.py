@@ -403,5 +403,111 @@ async def download_file(filename: str):
         raise HTTPException(status_code=404, detail="الملف غير موجود")
     return FileResponse(file_path, filename=filename)
 
+@app.post("/api/import/youtube")
+async def import_from_youtube(
+    url: str = Form(...),
+    download_subtitles: bool = Form(True),
+    subtitle_lang: str = Form("ar")
+):
+    """تنزيل فيديو من YouTube مع الترجمات"""
+    try:
+        import yt_dlp
+        import re
+        
+        video_id = re.search(r'(?:v=|\/)([0-9A-Za-z_-]{11}).*', url)
+        if not video_id:
+            raise HTTPException(status_code=400, detail="رابط YouTube غير صالح")
+        
+        video_filename = f"youtube_{video_id.group(1)}.mp4"
+        subtitle_filename = f"youtube_{video_id.group(1)}.{subtitle_lang}.srt"
+        
+        video_path = UPLOAD_DIR / video_filename
+        subtitle_path = UPLOAD_DIR / subtitle_filename
+        
+        ydl_opts = {
+            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+            'outtmpl': str(video_path.with_suffix('')),
+            'merge_output_format': 'mp4',
+        }
+        
+        if download_subtitles:
+            ydl_opts.update({
+                'writesubtitles': True,
+                'writeautomaticsub': True,
+                'subtitleslangs': [subtitle_lang],
+                'subtitlesformat': 'srt',
+            })
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            title = info.get('title', 'video')
+        
+        if not video_path.exists():
+            video_path = video_path.with_suffix('.mp4')
+        
+        result = {
+            "success": True,
+            "video": {
+                "filename": video_filename,
+                "path": str(video_path),
+                "title": title,
+                "size": video_path.stat().st_size if video_path.exists() else 0
+            }
+        }
+        
+        if download_subtitles and subtitle_path.exists():
+            result["subtitle"] = {
+                "filename": subtitle_filename,
+                "path": str(subtitle_path),
+                "language": subtitle_lang
+            }
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"خطأ في تنزيل الفيديو: {str(e)}")
+
+@app.post("/api/import/gdrive")
+async def import_from_google_drive(
+    url: str = Form(...)
+):
+    """تنزيل ملف من Google Drive"""
+    try:
+        import gdown
+        import re
+        
+        file_id_match = re.search(r'/file/d/([a-zA-Z0-9_-]+)', url) or \
+                       re.search(r'id=([a-zA-Z0-9_-]+)', url)
+        
+        if not file_id_match:
+            raise HTTPException(status_code=400, detail="رابط Google Drive غير صالح")
+        
+        file_id = file_id_match.group(1)
+        temp_filename = f"gdrive_{file_id}"
+        temp_path = UPLOAD_DIR / temp_filename
+        
+        output_path = gdown.download(id=file_id, output=str(temp_path), quiet=False)
+        
+        if not output_path:
+            raise HTTPException(status_code=500, detail="فشل تنزيل الملف من Google Drive")
+        
+        actual_path = Path(output_path)
+        file_extension = actual_path.suffix or '.mp4'
+        final_filename = f"gdrive_{file_id}{file_extension}"
+        final_path = UPLOAD_DIR / final_filename
+        
+        if actual_path != final_path:
+            actual_path.rename(final_path)
+        
+        return {
+            "success": True,
+            "filename": final_filename,
+            "path": str(final_path),
+            "size": final_path.stat().st_size
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"خطأ في تنزيل الملف: {str(e)}")
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
