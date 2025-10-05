@@ -12,12 +12,16 @@ import uvicorn
 from video_processor import VideoProcessor
 from subtitle_processor import SubtitleProcessor
 from export_processor import ExportProcessor
+from audio_processor import AudioProcessor
+from content_library import ContentLibrary
 
 app = FastAPI(title="Video Editor API", version="1.0.0")
 
 video_processor = VideoProcessor()
 subtitle_processor = SubtitleProcessor()
 export_processor = ExportProcessor()
+audio_processor = AudioProcessor()
+content_library = ContentLibrary()
 
 app.add_middleware(
     CORSMiddleware,
@@ -218,6 +222,179 @@ async def get_qualities():
 @app.get("/api/export/formats")
 async def get_formats():
     return {"formats": export_processor.get_available_formats()}
+
+@app.post("/api/audio/extract")
+async def extract_audio(
+    filename: str = Form(...),
+    output_filename: str = Form(...)
+):
+    result = audio_processor.extract_audio(filename, output_filename)
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error"))
+    return result
+
+@app.post("/api/audio/background")
+async def add_background_music(
+    video_filename: str = Form(...),
+    audio_filename: str = Form(...),
+    output_filename: str = Form(...),
+    music_volume: float = Form(0.3),
+    original_volume: float = Form(1.0)
+):
+    result = audio_processor.add_background_music(
+        video_filename,
+        audio_filename,
+        output_filename,
+        music_volume=music_volume,
+        original_volume=original_volume
+    )
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error"))
+    return result
+
+@app.post("/api/audio/volume")
+async def adjust_volume(
+    filename: str = Form(...),
+    output_filename: str = Form(...),
+    volume: float = Form(1.0)
+):
+    result = audio_processor.adjust_volume(filename, output_filename, volume=volume)
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error"))
+    return result
+
+@app.post("/api/audio/replace")
+async def replace_audio(
+    video_filename: str = Form(...),
+    audio_filename: str = Form(...),
+    output_filename: str = Form(...)
+):
+    result = audio_processor.replace_audio(video_filename, audio_filename, output_filename)
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error"))
+    return result
+
+@app.post("/api/audio/remove")
+async def remove_audio(
+    filename: str = Form(...),
+    output_filename: str = Form(...)
+):
+    result = audio_processor.remove_audio(filename, output_filename)
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error"))
+    return result
+
+@app.post("/api/audio/fade")
+async def fade_audio(
+    filename: str = Form(...),
+    output_filename: str = Form(...),
+    fade_in_duration: float = Form(0),
+    fade_out_duration: float = Form(0)
+):
+    result = audio_processor.fade_audio(
+        filename,
+        output_filename,
+        fade_in_duration=fade_in_duration,
+        fade_out_duration=fade_out_duration
+    )
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error"))
+    return result
+
+@app.post("/api/effects/transition")
+async def apply_transition(
+    clip1_filename: str = Form(...),
+    clip2_filename: str = Form(...),
+    output_filename: str = Form(...),
+    transition_type: str = Form("fade"),
+    duration: float = Form(1.0)
+):
+    result = content_library.apply_transition(
+        clip1_filename,
+        clip2_filename,
+        output_filename,
+        transition_type=transition_type,
+        duration=duration
+    )
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error"))
+    return result
+
+@app.post("/api/effects/filter")
+async def apply_filter(
+    filename: str = Form(...),
+    output_filename: str = Form(...),
+    filter_type: str = Form(...),
+    intensity: float = Form(1.0)
+):
+    result = content_library.apply_filter(
+        filename,
+        output_filename,
+        filter_type=filter_type,
+        intensity=intensity
+    )
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error"))
+    return result
+
+@app.post("/api/effects/text")
+async def add_text_overlay(
+    filename: str = Form(...),
+    output_filename: str = Form(...),
+    text: str = Form(...),
+    position_x: str = Form("center"),
+    position_y: str = Form("bottom"),
+    fontsize: int = Form(50),
+    color: str = Form("white"),
+    duration: Optional[float] = Form(None)
+):
+    position = (position_x, position_y)
+    result = content_library.add_text_overlay(
+        filename,
+        output_filename,
+        text=text,
+        position=position,
+        fontsize=fontsize,
+        color=color,
+        duration=duration
+    )
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error"))
+    return result
+
+@app.post("/api/effects/sticker")
+async def add_sticker(
+    video_filename: str = Form(...),
+    sticker_filename: str = Form(...),
+    output_filename: str = Form(...),
+    position_x: str = Form("center"),
+    position_y: str = Form("center"),
+    width: Optional[int] = Form(None),
+    height: Optional[int] = Form(None),
+    duration: Optional[float] = Form(None)
+):
+    position = (position_x, position_y)
+    size = (width, height) if width and height else None
+    
+    result = content_library.add_sticker(
+        video_filename,
+        sticker_filename,
+        output_filename,
+        position=position,
+        size=size,
+        duration=duration
+    )
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error"))
+    return result
+
+@app.get("/api/effects/transitions")
+async def get_transitions():
+    return {"transitions": content_library.get_available_transitions()}
+
+@app.get("/api/effects/filters")
+async def get_filters():
+    return {"filters": content_library.get_available_filters()}
 
 @app.get("/api/download/{filename}")
 async def download_file(filename: str):
