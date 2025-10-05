@@ -2,10 +2,19 @@ import { drizzle } from "drizzle-orm/neon-serverless";
 import { Pool, neonConfig } from "@neondatabase/serverless";
 import ws from "ws";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL environment variable is not set");
+let db: any;
+
+if (process.env.DATABASE_URL) {
+  neonConfig.webSocketConstructor = ws;
+  neonConfig.pipelineTLS = false;
+  neonConfig.pipelineConnect = false;
+  
+  const pool = new Pool({ 
+    connectionString: process.env.DATABASE_URL,
+  });
+  db = drizzle({ client: pool });
+} else {
+  db = null;
 }
 
-neonConfig.webSocketConstructor = ws;
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle({ client: pool });
+export { db };
