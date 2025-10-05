@@ -208,13 +208,17 @@ export default function Editor() {
             </div>
           </div>
 
-          <Timeline />
+          <Timeline videoFilename={files.find(f => f.type === 'video')?.url?.split('/').pop()} />
         </div>
 
         {showProperties && <PropertiesPanel />}
       </div>
 
-      <ExportDialog open={exportOpen} onOpenChange={setExportOpen} />
+      <ExportDialog 
+        open={exportOpen} 
+        onOpenChange={setExportOpen}
+        videoFilename={files.find(f => f.type === 'video')?.url?.split('/').pop()}
+      />
     </div>
   );
 }

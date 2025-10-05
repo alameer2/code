@@ -17,45 +17,103 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Download, FileVideo, CheckCircle2 } from "lucide-react";
+import { Download, FileVideo, CheckCircle2, AlertCircle } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { VideoAPI } from "@/lib/videoApi";
+import { useToast } from "@/hooks/use-toast";
 
 interface ExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  videoFilename?: string;
 }
 
-export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
+export function ExportDialog({ open, onOpenChange, videoFilename }: ExportDialogProps) {
   const [quality, setQuality] = useState("1080p");
   const [format, setFormat] = useState("mp4");
+  const [fps, setFps] = useState("30");
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [completed, setCompleted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [outputFile, setOutputFile] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    if (!videoFilename) {
+      toast({
+        title: "خطأ",
+        description: "لا يوجد فيديو للتصدير",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setExporting(true);
     setProgress(0);
     setCompleted(false);
+    setError(null);
 
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            setExporting(false);
-            setCompleted(true);
-          }, 500);
-          return 100;
+    try {
+      const outputFilename = `export_${quality}_${Date.now()}.${format}`;
+      
+      const progressInterval = setInterval(() => {
+        setProgress((prev) => Math.min(prev + 10, 90));
+      }, 500);
+
+      const result = await VideoAPI.exportVideo(
+        videoFilename,
+        outputFilename,
+        {
+          quality,
+          format,
+          fps: parseInt(fps),
+          audio_bitrate: "192k",
         }
-        return prev + 5;
+      );
+
+      clearInterval(progressInterval);
+
+      if (result.success && result.output_file) {
+        setProgress(100);
+        setOutputFile(result.output_file);
+        setTimeout(() => {
+          setExporting(false);
+          setCompleted(true);
+        }, 500);
+        
+        toast({
+          title: "نجح التصدير",
+          description: "تم تصدير الفيديو بنجاح",
+        });
+      } else {
+        throw new Error(result.error || "فشل التصدير");
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "حدث خطأ أثناء التصدير";
+      setError(errorMessage);
+      setExporting(false);
+      toast({
+        title: "فشل التصدير",
+        description: errorMessage,
+        variant: "destructive",
       });
-    }, 200);
+    }
   };
 
   const handleReset = () => {
     setProgress(0);
     setExporting(false);
     setCompleted(false);
+    setError(null);
+    setOutputFile(null);
+  };
+
+  const handleDownload = () => {
+    if (outputFile) {
+      const downloadUrl = VideoAPI.getDownloadUrl(outputFile);
+      window.open(downloadUrl, '_blank');
+    }
   };
 
   return (
@@ -111,7 +169,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
 
               <div className="space-y-2">
                 <Label htmlFor="fps">معدل الإطارات</Label>
-                <Select defaultValue="30">
+                <Select value={fps} onValueChange={setFps}>
                   <SelectTrigger id="fps" data-testid="select-fps">
                     <SelectValue />
                   </SelectTrigger>
@@ -123,6 +181,13 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                 </Select>
               </div>
             </div>
+
+            {error && (
+              <div className="bg-destructive/10 text-destructive p-3 rounded-md flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span className="text-sm">{error}</span>
+              </div>
+            )}
 
             {exporting && (
               <div className="space-y-2">
@@ -167,7 +232,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                 </p>
               </div>
               <div className="flex gap-2 justify-center pt-4">
-                <Button data-testid="button-download-file">
+                <Button onClick={handleDownload} data-testid="button-download-file">
                   <FileVideo className="h-4 w-4 ml-2" />
                   تحميل الملف
                 </Button>
