@@ -25,7 +25,7 @@ export function PropertiesPanel() {
   const [opacity, setOpacity] = useState([100]);
 
   return (
-    <div className="flex flex-col h-full bg-card border-l border-border w-80">
+    <div className="flex flex-col h-full bg-card border-l border-border">
       <div className="p-4 border-b border-border">
         <h3 className="font-semibold">خصائص العنصر</h3>
         <p className="text-xs text-muted-foreground mt-1">

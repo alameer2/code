@@ -312,7 +312,7 @@ export default function Editor() {
         </div>
 
         {showLayers && (
-          <div className="w-72 flex-shrink-0 border-l border-border">
+          <div className="w-72 flex-shrink-0 border-l border-border overflow-hidden">
             <LayerPanel
               layers={layers}
               selectedLayerId={selectedLayerId}
@@ -323,7 +323,11 @@ export default function Editor() {
           </div>
         )}
 
-        {showProperties && <PropertiesPanel />}
+        {showProperties && (
+          <div className="w-80 flex-shrink-0 overflow-hidden">
+            <PropertiesPanel />
+          </div>
+        )}
       </div>
 
       <ExportDialog 
