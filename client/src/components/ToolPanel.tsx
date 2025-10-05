@@ -399,10 +399,62 @@ export function ToolPanel({ videoFilename, onVideoProcessed, onAddTextLayer }: T
         </TabsContent>
 
         <TabsContent value="stickers" className="flex-1 m-0 p-4">
-          <div className="text-center text-muted-foreground py-8">
-            <Sticker className="h-12 w-12 mx-auto mb-2" />
-            <p className="text-sm">مكتبة الملصقات</p>
-          </div>
+          <ScrollArea className="h-full -mx-4 px-4">
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-semibold mb-3 text-primary">ملصقات الوجوه التعبيرية</h4>
+                <div className="grid grid-cols-3 gap-2">
+                  {["😊", "😂", "😍", "🤔", "👍", "❤️", "🎉", "🔥", "⭐"].map((emoji, i) => (
+                    <div
+                      key={i}
+                      className="aspect-square p-3 border rounded-lg hover-elevate cursor-pointer transition-all bg-card hover:bg-accent/50 flex items-center justify-center text-3xl"
+                      data-testid={`emoji-${i}`}
+                    >
+                      {emoji}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold mb-3 text-primary">أشكال وأيقونات</h4>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { icon: "⬆️", name: "سهم" },
+                    { icon: "✓", name: "صح" },
+                    { icon: "✗", name: "خطأ" },
+                    { icon: "●", name: "دائرة" },
+                    { icon: "■", name: "مربع" },
+                    { icon: "▶", name: "تشغيل" },
+                  ].map((shape, i) => (
+                    <div
+                      key={i}
+                      className="aspect-square p-3 border rounded-lg hover-elevate cursor-pointer transition-all bg-card hover:bg-accent/50 flex flex-col items-center justify-center gap-1"
+                      data-testid={`shape-${i}`}
+                    >
+                      <span className="text-2xl">{shape.icon}</span>
+                      <span className="text-xs text-muted-foreground">{shape.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold mb-3 text-primary">رموز وأيقونات</h4>
+                <div className="grid grid-cols-3 gap-2">
+                  {["📱", "💻", "🎵", "📷", "🎬", "📝"].map((icon, i) => (
+                    <div
+                      key={i}
+                      className="aspect-square p-3 border rounded-lg hover-elevate cursor-pointer transition-all bg-card hover:bg-accent/50 flex items-center justify-center text-3xl"
+                      data-testid={`icon-${i}`}
+                    >
+                      {icon}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
         </TabsContent>
       </Tabs>
 
