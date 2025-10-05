@@ -5,6 +5,7 @@ import { Timeline } from "@/components/Timeline";
 import { SubtitleEditor } from "@/components/SubtitleEditor";
 import { ToolPanel } from "@/components/ToolPanel";
 import { PropertiesPanel } from "@/components/PropertiesPanel";
+import LayerPanel, { Layer } from "@/components/LayerPanel";
 import { ExportDialog } from "@/components/ExportDialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
@@ -33,6 +34,9 @@ export default function Editor() {
   const [showSubtitles, setShowSubtitles] = useState(true);
   const [showTools, setShowTools] = useState(true);
   const [showProperties, setShowProperties] = useState(true);
+  const [showLayers, setShowLayers] = useState(true);
+  const [layers, setLayers] = useState<Layer[]>([]);
+  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   
   const urlParams = new URLSearchParams(window.location.search);
   const projectId = urlParams.get("id");
@@ -62,6 +66,26 @@ export default function Editor() {
       setLocation("/");
     }
   }, [projectId, setLocation]);
+
+  useEffect(() => {
+    if (files.length > 0) {
+      const newLayers: Layer[] = files.map((file, index) => ({
+        id: `layer_${file.id}`,
+        name: file.filename || `طبقة ${index + 1}`,
+        type: file.type as 'video' | 'text' | 'image' | 'sticker',
+        visible: true,
+        locked: false,
+        order: index,
+        thumbnail: file.url,
+      }));
+      
+      setLayers(prev => {
+        const existingIds = new Set(prev.map(l => l.id));
+        const toAdd = newLayers.filter(l => !existingIds.has(l.id));
+        return [...prev, ...toAdd];
+      });
+    }
+  }, [files]);
 
   if (!projectId) {
     return null;
@@ -174,6 +198,9 @@ export default function Editor() {
               <DropdownMenuItem onClick={() => setShowTools(!showTools)}>
                 {showTools ? "إخفاء" : "إظهار"} الأدوات
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowLayers(!showLayers)}>
+                {showLayers ? "إخفاء" : "إظهار"} الطبقات
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setShowProperties(!showProperties)}>
                 {showProperties ? "إخفاء" : "إظهار"} الخصائص
               </DropdownMenuItem>
@@ -194,6 +221,18 @@ export default function Editor() {
         {showTools && (
           <ToolPanel 
             videoFilename={files.find(f => f.type === 'video')?.url?.split('/').pop()}
+            onAddTextLayer={(text) => {
+              const newLayer: Layer = {
+                id: `layer_text_${Date.now()}`,
+                name: text.substring(0, 20) + (text.length > 20 ? '...' : ''),
+                type: 'text',
+                visible: true,
+                locked: false,
+                order: layers.length,
+              };
+              setLayers([...layers, newLayer]);
+              setSelectedLayerId(newLayer.id);
+            }}
           />
         )}
 
@@ -216,6 +255,18 @@ export default function Editor() {
 
           <Timeline videoFilename={files.find(f => f.type === 'video')?.url?.split('/').pop()} />
         </div>
+
+        {showLayers && (
+          <div className="w-72 flex-shrink-0 border-l border-border">
+            <LayerPanel
+              layers={layers}
+              selectedLayerId={selectedLayerId}
+              onLayerSelect={setSelectedLayerId}
+              onLayerUpdate={setLayers}
+              onLayerDelete={(id) => setLayers(layers.filter(l => l.id !== id))}
+            />
+          </div>
+        )}
 
         {showProperties && <PropertiesPanel />}
       </div>

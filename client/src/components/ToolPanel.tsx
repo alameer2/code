@@ -28,9 +28,10 @@ import { useToast } from "@/hooks/use-toast";
 interface ToolPanelProps {
   videoFilename?: string;
   onVideoProcessed?: (filename: string) => void;
+  onAddTextLayer?: (text: string) => void;
 }
 
-export function ToolPanel({ videoFilename, onVideoProcessed }: ToolPanelProps) {
+export function ToolPanel({ videoFilename, onVideoProcessed, onAddTextLayer }: ToolPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<string[]>([]);
   const [transitions, setTransitions] = useState<string[]>([]);
@@ -38,6 +39,8 @@ export function ToolPanel({ videoFilename, onVideoProcessed }: ToolPanelProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>("");
   const [filterIntensity, setFilterIntensity] = useState([1.0]);
   const [applying, setApplying] = useState(false);
+  const [textDialogOpen, setTextDialogOpen] = useState(false);
+  const [newTextContent, setNewTextContent] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -116,6 +119,27 @@ export function ToolPanel({ videoFilename, onVideoProcessed }: ToolPanelProps) {
       });
     } finally {
       setApplying(false);
+    }
+  };
+
+  const handleAddText = () => {
+    if (!newTextContent.trim()) {
+      toast({
+        title: "خطأ",
+        description: "يرجى إدخال نص",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (onAddTextLayer) {
+      onAddTextLayer(newTextContent);
+      toast({
+        title: "تم إضافة النص",
+        description: "تمت إضافة طبقة نص جديدة",
+      });
+      setNewTextContent("");
+      setTextDialogOpen(false);
     }
   };
 
@@ -200,6 +224,7 @@ export function ToolPanel({ videoFilename, onVideoProcessed }: ToolPanelProps) {
             <Button
               variant="outline"
               className="w-full justify-start"
+              onClick={() => setTextDialogOpen(true)}
               data-testid="button-add-title"
             >
               <Type className="h-4 w-4 ml-2" />
@@ -316,6 +341,44 @@ export function ToolPanel({ videoFilename, onVideoProcessed }: ToolPanelProps) {
             </Button>
             <Button onClick={handleApplyFilter} disabled={applying || !videoFilename}>
               {applying ? "جاري التطبيق..." : "تطبيق"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={textDialogOpen} onOpenChange={setTextDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>إضافة طبقة نص</DialogTitle>
+            <DialogDescription>
+              أدخل النص الذي تريد إضافته إلى الفيديو
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4" dir="rtl">
+            <div className="space-y-2">
+              <Label>النص</Label>
+              <Input
+                value={newTextContent}
+                onChange={(e) => setNewTextContent(e.target.value)}
+                placeholder="أدخل النص هنا..."
+                className="text-right"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setTextDialogOpen(false);
+                setNewTextContent("");
+              }}
+            >
+              إلغاء
+            </Button>
+            <Button onClick={handleAddText}>
+              إضافة
             </Button>
           </DialogFooter>
         </DialogContent>
