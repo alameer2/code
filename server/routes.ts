@@ -2,6 +2,24 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertProjectSchema, insertFileSchema } from "@shared/schema";
+import multer from "multer";
+import path from "path";
+import { randomUUID } from "crypto";
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, "uploads/");
+    },
+    filename: (req, file, cb) => {
+      const uniqueName = `${randomUUID()}${path.extname(file.originalname)}`;
+      cb(null, uniqueName);
+    },
+  }),
+  limits: {
+    fileSize: 500 * 1024 * 1024,
+  },
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -91,6 +109,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/upload", upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "لم يتم رفع أي ملف" });
+      }
+
+      const projectId = req.body.projectId;
+      if (!projectId) {
+        return res.status(400).json({ message: "معرف المشروع مطلوب" });
+      }
+
+      const fileUrl = `/uploads/${req.file.filename}`;
+      const fileData = {
+        projectId,
+        name: req.file.originalname,
+        type: req.file.mimetype.startsWith("video") ? "video" : 
+              req.file.mimetype.startsWith("audio") ? "audio" : "subtitle",
+        size: req.file.size,
+        url: fileUrl,
+      };
+
+      const file = await storage.createFile(fileData);
+      res.status(201).json(file);
+    } catch (error) {
+      res.status(500).json({ message: "خطأ في رفع الملف" });
+    }
+  });
+
+  app.use("/uploads", (req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    next();
+  });
+  
   const httpServer = createServer(app);
 
   return httpServer;
