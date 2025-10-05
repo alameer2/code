@@ -5,6 +5,7 @@ import { insertProjectSchema, insertFileSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 import { randomUUID } from "crypto";
+import { createProxyMiddleware } from "http-proxy-middleware";
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -142,6 +143,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.setHeader("Access-Control-Allow-Origin", "*");
     next();
   });
+  
+  app.use("/api/video", createProxyMiddleware({
+    target: "http://localhost:8000",
+    changeOrigin: true,
+  }));
+  
+  app.use("/api/audio", createProxyMiddleware({
+    target: "http://localhost:8000",
+    changeOrigin: true,
+  }));
+  
+  app.use("/api/subtitle", createProxyMiddleware({
+    target: "http://localhost:8000",
+    changeOrigin: true,
+  }));
+  
+  app.use("/api/export", createProxyMiddleware({
+    target: "http://localhost:8000",
+    changeOrigin: true,
+  }));
+  
+  app.use("/api/effects", createProxyMiddleware({
+    target: "http://localhost:8000",
+    changeOrigin: true,
+  }));
+  
+  app.use("/api/download", createProxyMiddleware({
+    target: "http://localhost:8000",
+    changeOrigin: true,
+  }));
+  
+  app.use("/health", createProxyMiddleware({
+    target: "http://localhost:8000",
+    changeOrigin: true,
+  }));
+  
+  app.use("/processed", createProxyMiddleware({
+    target: "http://localhost:8000",
+    changeOrigin: true,
+  }));
   
   const httpServer = createServer(app);
 

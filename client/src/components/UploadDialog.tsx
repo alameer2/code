@@ -16,6 +16,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { VideoAPI } from "@/lib/videoApi";
 
 interface UploadDialogProps {
   open: boolean;
@@ -41,13 +42,25 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
       const project = await res.json();
       
       if (data.file) {
-        const formData = new FormData();
-        formData.append("file", data.file);
-        formData.append("projectId", project.id);
+        const fileType = data.file.type;
+        let filename: string;
         
-        await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
+        if (fileType.startsWith("video")) {
+          filename = await VideoAPI.uploadVideo(data.file);
+        } else if (fileType.startsWith("audio")) {
+          filename = await VideoAPI.uploadAudio(data.file);
+        } else {
+          filename = await VideoAPI.uploadSubtitle(data.file);
+        }
+        
+        const fileUrl = `/uploads/${filename}`;
+        await apiRequest("POST", "/api/files", {
+          projectId: project.id,
+          name: data.file.name,
+          type: fileType.startsWith("video") ? "video" : 
+                fileType.startsWith("audio") ? "audio" : "subtitle",
+          size: data.file.size,
+          url: fileUrl,
         });
       }
       
