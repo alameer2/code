@@ -46,3 +46,7 @@ coverage/
 *.tmp
 *.temp
 .temp/
+
+# Uploads (keep directory structure)
+uploads/*
+!uploads/.gitkeep
