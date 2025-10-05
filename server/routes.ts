@@ -173,6 +173,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   }));
   
+  app.use("/api/import", createProxyMiddleware({
+    target: "http://localhost:8000",
+    changeOrigin: true,
+  }));
+  
   app.use("/api/download", createProxyMiddleware({
     target: "http://localhost:8000",
     changeOrigin: true,

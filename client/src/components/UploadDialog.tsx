@@ -111,7 +111,7 @@ export function UploadDialog({ open, onOpenChange, projectId }: UploadDialogProp
       formData.append("subtitle_lang", data.subtitleLang);
       formData.append("quality", data.quality);
 
-      const res = await fetch("http://localhost:8000/api/import/youtube", {
+      const res = await fetch("/api/import/youtube", {
         method: "POST",
         body: formData,
       });
@@ -183,7 +183,7 @@ export function UploadDialog({ open, onOpenChange, projectId }: UploadDialogProp
       const formData = new FormData();
       formData.append("url", url);
 
-      const res = await fetch("http://localhost:8000/api/import/gdrive", {
+      const res = await fetch("/api/import/gdrive", {
         method: "POST",
         body: formData,
       });
