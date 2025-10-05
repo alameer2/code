@@ -11,11 +11,13 @@ import uvicorn
 
 from video_processor import VideoProcessor
 from subtitle_processor import SubtitleProcessor
+from export_processor import ExportProcessor
 
 app = FastAPI(title="Video Editor API", version="1.0.0")
 
 video_processor = VideoProcessor()
 subtitle_processor = SubtitleProcessor()
+export_processor = ExportProcessor()
 
 app.add_middleware(
     CORSMiddleware,
@@ -164,6 +166,58 @@ async def add_subtitles(
     if not result.get("success"):
         raise HTTPException(status_code=500, detail=result.get("error"))
     return result
+
+@app.post("/api/export/video")
+async def export_video(
+    filename: str = Form(...),
+    output_filename: str = Form(...),
+    quality: str = Form("1080p"),
+    format: str = Form("mp4"),
+    fps: Optional[int] = Form(None),
+    audio_bitrate: str = Form("192k")
+):
+    result = export_processor.export_video(
+        filename,
+        output_filename,
+        quality=quality,
+        format=format,
+        fps=fps,
+        audio_bitrate=audio_bitrate
+    )
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error"))
+    return result
+
+@app.post("/api/export/custom")
+async def export_custom(
+    filename: str = Form(...),
+    output_filename: str = Form(...),
+    width: int = Form(...),
+    height: int = Form(...),
+    bitrate: str = Form("4000k"),
+    fps: int = Form(30),
+    format: str = Form("mp4")
+):
+    result = export_processor.export_with_custom_settings(
+        filename,
+        output_filename,
+        width=width,
+        height=height,
+        bitrate=bitrate,
+        fps=fps,
+        format=format
+    )
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error"))
+    return result
+
+@app.get("/api/export/qualities")
+async def get_qualities():
+    return {"qualities": export_processor.get_available_qualities()}
+
+@app.get("/api/export/formats")
+async def get_formats():
+    return {"formats": export_processor.get_available_formats()}
 
 @app.get("/api/download/{filename}")
 async def download_file(filename: str):
