@@ -6,48 +6,83 @@ import { UploadDialog } from "@/components/UploadDialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Plus, Search, Grid3x3, List, Film } from "lucide-react";
 import { useLocation } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { Project } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
+import { formatDistanceToNow } from "date-fns";
+import { ar } from "date-fns/locale";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const { toast } = useToast();
 
-  const projects = [
-    {
-      id: "1",
-      title: "فيديو ترويجي للمنتج الجديد",
-      duration: "2:45",
-      updatedAt: "منذ ساعتين",
-      status: "draft" as const,
+  const { data: projects = [], isLoading } = useQuery<Project[]>({
+    queryKey: ["/api/projects"],
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/projects/${id}`);
     },
-    {
-      id: "2",
-      title: "شرح تعليمي - الدرس الأول",
-      duration: "5:30",
-      updatedAt: "أمس",
-      status: "completed" as const,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      toast({
+        title: "تم حذف المشروع بنجاح",
+      });
     },
-    {
-      id: "3",
-      title: "مقابلة مع الخبراء",
-      duration: "15:20",
-      updatedAt: "منذ 3 أيام",
-      status: "exporting" as const,
+    onError: () => {
+      toast({
+        title: "خطأ في حذف المشروع",
+        variant: "destructive",
+      });
     },
-  ];
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const project = projects.find((p) => p.id === id);
+      if (!project) throw new Error("المشروع غير موجود");
+      
+      await apiRequest("POST", "/api/projects", {
+        title: `${project.title} (نسخة)`,
+        description: project.description,
+        duration: project.duration,
+        status: "draft",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      toast({
+        title: "تم نسخ المشروع بنجاح",
+      });
+    },
+  });
 
   const handleOpenProject = (id: string) => {
-    console.log("فتح المشروع:", id);
-    setLocation("/editor");
+    setLocation(`/editor?id=${id}`);
   };
 
   const handleDeleteProject = (id: string) => {
-    console.log("حذف المشروع:", id);
+    deleteMutation.mutate(id);
   };
 
   const handleDuplicateProject = (id: string) => {
-    console.log("نسخ المشروع:", id);
+    duplicateMutation.mutate(id);
+  };
+
+  const filteredProjects = projects.filter((project) =>
+    project.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const getRelativeTime = (date: Date) => {
+    return formatDistanceToNow(new Date(date), { 
+      addSuffix: true, 
+      locale: ar 
+    });
   };
 
   return (
@@ -77,7 +112,7 @@ export default function Dashboard() {
           <div>
             <h2 className="text-2xl font-bold mb-1">مشاريعي</h2>
             <p className="text-sm text-muted-foreground">
-              {projects.length} مشروع
+              {isLoading ? "جاري التحميل..." : `${filteredProjects.length} مشروع`}
             </p>
           </div>
 
@@ -125,28 +160,41 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {projects.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-16">
+            <p className="text-muted-foreground">جاري تحميل المشاريع...</p>
+          </div>
+        ) : filteredProjects.length === 0 ? (
           <div className="text-center py-16">
             <div className="bg-muted p-6 rounded-full inline-block mb-4">
               <Film className="h-12 w-12 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-semibold mb-2">
-              لا توجد مشاريع بعد
+              {projects.length === 0 ? "لا توجد مشاريع بعد" : "لا توجد نتائج"}
             </h3>
             <p className="text-muted-foreground mb-4">
-              ابدأ بإنشاء مشروع جديد لتعديل الفيديوهات
+              {projects.length === 0 
+                ? "ابدأ بإنشاء مشروع جديد لتعديل الفيديوهات"
+                : "جرب مصطلح بحث آخر"
+              }
             </p>
-            <Button onClick={() => setUploadOpen(true)}>
-              <Plus className="h-4 w-4 ml-2" />
-              إنشاء مشروع
-            </Button>
+            {projects.length === 0 && (
+              <Button onClick={() => setUploadOpen(true)}>
+                <Plus className="h-4 w-4 ml-2" />
+                إنشاء مشروع
+              </Button>
+            )}
           </div>
         ) : (
           <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}>
-            {projects.map((project) => (
+            {filteredProjects.map((project) => (
               <ProjectCard
                 key={project.id}
-                {...project}
+                id={project.id}
+                title={project.title}
+                duration={project.duration ?? "0:00"}
+                updatedAt={getRelativeTime(project.updatedAt)}
+                status={project.status as "draft" | "completed" | "exporting"}
                 onOpen={handleOpenProject}
                 onDelete={handleDeleteProject}
                 onDuplicate={handleDuplicateProject}

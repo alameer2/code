@@ -12,62 +12,79 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Link2, Video, Music, FileText } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 interface UploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpload: (file: File | string, type: "local" | "url") => void;
+  onUpload?: (file: File | string, type: "local" | "url") => void;
 }
 
-export function UploadDialog({ open, onOpenChange, onUpload }: UploadDialogProps) {
+export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
+  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"local" | "url">("local");
+  const [projectTitle, setProjectTitle] = useState("");
   const [url, setUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const { toast } = useToast();
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setUploading(true);
-      setProgress(0);
+  const createProjectMutation = useMutation({
+    mutationFn: async (data: { title: string; file?: File }) => {
+      const res = await apiRequest("POST", "/api/projects", {
+        title: data.title,
+        status: "draft",
+      });
+      const project = await res.json();
       
-      const interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setTimeout(() => {
-              setUploading(false);
-              onUpload(file, "local");
-              onOpenChange(false);
-            }, 500);
-            return 100;
-          }
-          return prev + 10;
+      if (data.file) {
+        const formData = new FormData();
+        formData.append("file", data.file);
+        formData.append("projectId", project.id);
+        
+        await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
         });
-      }, 100);
+      }
+      
+      return project;
+    },
+    onSuccess: (project) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      toast({
+        title: "تم إنشاء المشروع بنجاح",
+      });
+      onOpenChange(false);
+      setProjectTitle("");
+      setUrl("");
+      setUploading(false);
+      setLocation(`/editor?id=${project.id}`);
+    },
+    onError: () => {
+      toast({
+        title: "خطأ في إنشاء المشروع",
+        variant: "destructive",
+      });
+      setUploading(false);
+    },
+  });
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && projectTitle.trim()) {
+      setUploading(true);
+      createProjectMutation.mutate({ title: projectTitle, file });
     }
   };
 
-  const handleUrlSubmit = () => {
-    if (url.trim()) {
+  const handleCreateProject = () => {
+    if (projectTitle.trim()) {
       setUploading(true);
-      setProgress(0);
-      
-      const interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setTimeout(() => {
-              setUploading(false);
-              onUpload(url, "url");
-              onOpenChange(false);
-              setUrl("");
-            }, 500);
-            return 100;
-          }
-          return prev + 10;
-        });
-      }, 100);
+      createProjectMutation.mutate({ title: projectTitle });
     }
   };
 
@@ -75,92 +92,62 @@ export function UploadDialog({ open, onOpenChange, onUpload }: UploadDialogProps
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl" data-testid="dialog-upload">
         <DialogHeader>
-          <DialogTitle>رفع ملف جديد</DialogTitle>
+          <DialogTitle>إنشاء مشروع جديد</DialogTitle>
           <DialogDescription>
-            اختر ملف فيديو أو صوت أو ترجمة من جهازك أو عبر رابط مباشر
+            أدخل اسم المشروع واختر ملف فيديو (اختياري)
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "local" | "url")}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="local" data-testid="tab-local">
-              <Upload className="h-4 w-4 ml-2" />
-              من الجهاز
-            </TabsTrigger>
-            <TabsTrigger value="url" data-testid="tab-url">
-              <Link2 className="h-4 w-4 ml-2" />
-              من رابط
-            </TabsTrigger>
-          </TabsList>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="project-title">اسم المشروع</Label>
+            <Input
+              id="project-title"
+              placeholder="مثال: فيديو ترويجي للمنتج"
+              value={projectTitle}
+              onChange={(e) => setProjectTitle(e.target.value)}
+              data-testid="input-project-title"
+            />
+          </div>
 
-          <TabsContent value="local" className="space-y-4">
-            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover-elevate transition-colors">
+          <div className="space-y-2">
+            <Label>رفع ملف فيديو (اختياري)</Label>
+            <div className="border-2 border-dashed border-border rounded-lg p-6 text-center transition-colors">
               <Input
                 type="file"
                 id="file-upload"
                 className="hidden"
                 accept="video/*,audio/*,.srt,.vtt,.ass"
                 onChange={handleFileSelect}
+                disabled={!projectTitle.trim()}
                 data-testid="input-file"
               />
               <label
                 htmlFor="file-upload"
-                className="cursor-pointer flex flex-col items-center gap-3"
+                className={`cursor-pointer flex flex-col items-center gap-2 ${!projectTitle.trim() ? "opacity-50 cursor-not-allowed" : ""}`}
               >
-                <div className="bg-primary/10 p-4 rounded-full">
-                  <Upload className="h-8 w-8 text-primary" />
+                <div className="bg-primary/10 p-3 rounded-full">
+                  <Upload className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <p className="font-medium">اضغط لاختيار ملف أو اسحب وأفلت هنا</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    الصيغ المدعومة: MP4, MOV, AVI, MP3, WAV, SRT, VTT, ASS
+                  <p className="font-medium text-sm">اضغط لاختيار ملف</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    MP4, MOV, AVI, MP3, WAV, SRT
                   </p>
                 </div>
               </label>
             </div>
+          </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div className="flex items-center gap-2 p-3 border rounded-md bg-card">
-                <Video className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">فيديو</span>
-              </div>
-              <div className="flex items-center gap-2 p-3 border rounded-md bg-card">
-                <Music className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">صوت</span>
-              </div>
-              <div className="flex items-center gap-2 p-3 border rounded-md bg-card">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">ترجمة</span>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="url" className="space-y-4">
-            <div className="space-y-3">
-              <Label htmlFor="url-input">الرابط المباشر</Label>
-              <Input
-                id="url-input"
-                placeholder="https://drive.google.com/file/..."
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                data-testid="input-url"
-              />
-              <p className="text-xs text-muted-foreground">
-                يدعم روابط Google Drive, Dropbox, والروابط المباشرة الأخرى
-              </p>
-            </div>
-
-            <Button
-              onClick={handleUrlSubmit}
-              disabled={!url.trim() || uploading}
-              className="w-full"
-              data-testid="button-submit-url"
-            >
-              <Link2 className="h-4 w-4 ml-2" />
-              إضافة من الرابط
-            </Button>
-          </TabsContent>
-        </Tabs>
+          <Button
+            onClick={handleCreateProject}
+            disabled={!projectTitle.trim() || uploading}
+            className="w-full"
+            data-testid="button-create-project"
+          >
+            {uploading ? "جاري الإنشاء..." : "إنشاء مشروع"}
+          </Button>
+        </div>
 
         {uploading && (
           <div className="space-y-2">
