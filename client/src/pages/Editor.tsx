@@ -191,13 +191,19 @@ export default function Editor() {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        {showTools && <ToolPanel />}
+        {showTools && (
+          <ToolPanel 
+            videoFilename={files.find(f => f.type === 'video')?.url?.split('/').pop()}
+          />
+        )}
 
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 flex overflow-hidden">
             {showSubtitles && (
               <div className="w-96 flex-shrink-0">
-                <SubtitleEditor />
+                <SubtitleEditor 
+                  videoFilename={files.find(f => f.type === 'video')?.url?.split('/').pop()}
+                />
               </div>
             )}
 

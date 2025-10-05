@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Scissors, Copy, Trash2, Plus, Video, Music, Type } from "lucide-react";
+import { Scissors, Copy, Trash2, Plus, Video, Music, Type, Gauge, RotateCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -13,6 +13,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { VideoAPI } from "@/lib/videoApi";
 import { useToast } from "@/hooks/use-toast";
 
@@ -65,6 +72,15 @@ export function Timeline({ videoFilename }: TimelineProps) {
   const [trimStart, setTrimStart] = useState("0");
   const [trimEnd, setTrimEnd] = useState("10");
   const [trimming, setTrimming] = useState(false);
+  
+  const [speedDialogOpen, setSpeedDialogOpen] = useState(false);
+  const [speed, setSpeed] = useState("1.0");
+  const [speeding, setSpeeding] = useState(false);
+  
+  const [rotateDialogOpen, setRotateDialogOpen] = useState(false);
+  const [rotateAngle, setRotateAngle] = useState("90");
+  const [rotating, setRotating] = useState(false);
+  
   const { toast } = useToast();
 
   const tracks = [
@@ -157,6 +173,136 @@ export function Timeline({ videoFilename }: TimelineProps) {
     }
   };
 
+  const handleOpenSpeedDialog = () => {
+    const selectedClipData = clips.find((c) => c.id === selectedClip);
+    if (selectedClipData && selectedClipData.type === 'video') {
+      setSpeedDialogOpen(true);
+    } else {
+      toast({
+        title: "تنبيه",
+        description: "الرجاء تحديد مقطع فيديو لتغيير السرعة",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSpeed = async () => {
+    const selectedClipData = clips.find((c) => c.id === selectedClip);
+    if (!selectedClipData || !selectedClipData.filename) {
+      toast({
+        title: "خطأ",
+        description: "لا يمكن تغيير السرعة",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSpeeding(true);
+    try {
+      const outputFilename = `speed_${Date.now()}.mp4`;
+      const result = await VideoAPI.speedVideo(
+        selectedClipData.filename,
+        parseFloat(speed),
+        outputFilename
+      );
+
+      if (result.success && result.output_file) {
+        toast({
+          title: "نجح تغيير السرعة",
+          description: `تم تغيير السرعة إلى ${speed}x`,
+        });
+        
+        const newClip: TimelineClip = {
+          id: Date.now().toString(),
+          type: "video",
+          start: 0,
+          duration: selectedClipData.duration / parseFloat(speed),
+          label: `سرعة ${speed}x`,
+          color: "bg-blue-500",
+          filename: result.output_file,
+        };
+        setClips([...clips, newClip]);
+        setSpeedDialogOpen(false);
+      } else {
+        throw new Error(result.error || "فشل تغيير السرعة");
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "حدث خطأ أثناء تغيير السرعة";
+      toast({
+        title: "فشل تغيير السرعة",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setSpeeding(false);
+    }
+  };
+
+  const handleOpenRotateDialog = () => {
+    const selectedClipData = clips.find((c) => c.id === selectedClip);
+    if (selectedClipData && selectedClipData.type === 'video') {
+      setRotateDialogOpen(true);
+    } else {
+      toast({
+        title: "تنبيه",
+        description: "الرجاء تحديد مقطع فيديو للتدوير",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRotate = async () => {
+    const selectedClipData = clips.find((c) => c.id === selectedClip);
+    if (!selectedClipData || !selectedClipData.filename) {
+      toast({
+        title: "خطأ",
+        description: "لا يمكن تدوير المقطع",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setRotating(true);
+    try {
+      const outputFilename = `rotated_${Date.now()}.mp4`;
+      const result = await VideoAPI.rotateVideo(
+        selectedClipData.filename,
+        parseInt(rotateAngle),
+        outputFilename
+      );
+
+      if (result.success && result.output_file) {
+        toast({
+          title: "نجح التدوير",
+          description: `تم تدوير الفيديو ${rotateAngle} درجة`,
+        });
+        
+        const newClip: TimelineClip = {
+          id: Date.now().toString(),
+          type: "video",
+          start: 0,
+          duration: selectedClipData.duration,
+          label: `مُدوّر ${rotateAngle}°`,
+          color: "bg-blue-500",
+          filename: result.output_file,
+        };
+        setClips([...clips, newClip]);
+        setRotateDialogOpen(false);
+      } else {
+        throw new Error(result.error || "فشل التدوير");
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "حدث خطأ أثناء التدوير";
+      toast({
+        title: "فشل التدوير",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setRotating(false);
+    }
+  };
+
   return (
     <div className="bg-card border-t border-border h-64 flex flex-col">
       <div className="flex items-center justify-between px-4 py-2 border-b border-border">
@@ -170,6 +316,26 @@ export function Timeline({ videoFilename }: TimelineProps) {
           >
             <Scissors className="h-4 w-4 ml-1" />
             قص
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={handleOpenSpeedDialog}
+            disabled={!selectedClip}
+            data-testid="button-speed"
+          >
+            <Gauge className="h-4 w-4 ml-1" />
+            السرعة
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={handleOpenRotateDialog}
+            disabled={!selectedClip}
+            data-testid="button-rotate"
+          >
+            <RotateCw className="h-4 w-4 ml-1" />
+            تدوير
           </Button>
           <Button 
             size="sm" 
@@ -338,6 +504,90 @@ export function Timeline({ videoFilename }: TimelineProps) {
             </Button>
             <Button onClick={handleTrim} disabled={trimming}>
               {trimming ? "جاري القص..." : "قص"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={speedDialogOpen} onOpenChange={setSpeedDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تغيير سرعة الفيديو</DialogTitle>
+            <DialogDescription>
+              اختر السرعة المطلوبة للفيديو
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="speed">السرعة</Label>
+              <Select value={speed} onValueChange={setSpeed} disabled={speeding}>
+                <SelectTrigger id="speed">
+                  <SelectValue placeholder="اختر السرعة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0.25">0.25x (بطيء جداً)</SelectItem>
+                  <SelectItem value="0.5">0.5x (بطيء)</SelectItem>
+                  <SelectItem value="0.75">0.75x</SelectItem>
+                  <SelectItem value="1.0">1.0x (عادي)</SelectItem>
+                  <SelectItem value="1.25">1.25x</SelectItem>
+                  <SelectItem value="1.5">1.5x (سريع)</SelectItem>
+                  <SelectItem value="2.0">2.0x (سريع جداً)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setSpeedDialogOpen(false)}
+              disabled={speeding}
+            >
+              إلغاء
+            </Button>
+            <Button onClick={handleSpeed} disabled={speeding}>
+              {speeding ? "جاري التطبيق..." : "تطبيق"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={rotateDialogOpen} onOpenChange={setRotateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تدوير الفيديو</DialogTitle>
+            <DialogDescription>
+              اختر زاوية التدوير للفيديو
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="rotate">زاوية التدوير</Label>
+              <Select value={rotateAngle} onValueChange={setRotateAngle} disabled={rotating}>
+                <SelectTrigger id="rotate">
+                  <SelectValue placeholder="اختر الزاوية" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="90">90° (يمين)</SelectItem>
+                  <SelectItem value="180">180° (مقلوب)</SelectItem>
+                  <SelectItem value="270">270° (يسار)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRotateDialogOpen(false)}
+              disabled={rotating}
+            >
+              إلغاء
+            </Button>
+            <Button onClick={handleRotate} disabled={rotating}>
+              {rotating ? "جاري التدوير..." : "تدوير"}
             </Button>
           </DialogFooter>
         </DialogContent>

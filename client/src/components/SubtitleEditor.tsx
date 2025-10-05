@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,8 +12,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Plus, Trash2, Download, Upload } from "lucide-react";
+import { Plus, Trash2, Download, Upload, Check } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { VideoAPI } from "@/lib/videoApi";
+import { useToast } from "@/hooks/use-toast";
 
 interface Subtitle {
   id: string;
@@ -22,7 +24,12 @@ interface Subtitle {
   text: string;
 }
 
-export function SubtitleEditor() {
+interface SubtitleEditorProps {
+  videoFilename?: string;
+  onVideoProcessed?: (filename: string) => void;
+}
+
+export function SubtitleEditor({ videoFilename, onVideoProcessed }: SubtitleEditorProps) {
   const [subtitles, setSubtitles] = useState<Subtitle[]>([
     { id: "1", startTime: "00:00:00.000", endTime: "00:00:03.000", text: "مرحباً بكم في محرر الترجمة الاحترافي" },
     { id: "2", startTime: "00:00:03.500", endTime: "00:00:07.000", text: "يمكنك تحرير التوقيت والنص بسهولة" },
@@ -32,6 +39,10 @@ export function SubtitleEditor() {
   const [fontSize, setFontSize] = useState([32]);
   const [fontFamily, setFontFamily] = useState("Cairo");
   const [position, setPosition] = useState("bottom");
+  const [color, setColor] = useState("white");
+  const [applying, setApplying] = useState(false);
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addSubtitle = () => {
     const newSubtitle: Subtitle = {
@@ -59,18 +70,144 @@ export function SubtitleEditor() {
 
   const selected = subtitles.find((s) => s.id === selectedId);
 
+  const handleImportSubtitle = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const parsedSubtitles = parseSRT(text);
+      
+      if (parsedSubtitles.length > 0) {
+        setSubtitles(parsedSubtitles);
+        setSelectedId(parsedSubtitles[0]?.id || null);
+        toast({
+          title: "نجح الاستيراد",
+          description: `تم استيراد ${parsedSubtitles.length} ترجمة`,
+        });
+      } else {
+        throw new Error("الملف فارغ أو بصيغة غير صحيحة");
+      }
+    } catch (err) {
+      toast({
+        title: "فشل الاستيراد",
+        description: err instanceof Error ? err.message : "حدث خطأ",
+        variant: "destructive",
+      });
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const parseSRT = (content: string): Subtitle[] => {
+    const blocks = content.trim().split(/\r?\n\r?\n/);
+    const subtitles: Subtitle[] = [];
+
+    blocks.forEach((block, index) => {
+      const lines = block.trim().split(/\r?\n/);
+      if (lines.length >= 3) {
+        const timeMatch = lines[1].match(/(\d{2}:\d{2}:\d{2}[,\.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,\.]\d{3})/);
+        if (timeMatch) {
+          subtitles.push({
+            id: `sub_${index + 1}`,
+            startTime: timeMatch[1].replace(',', '.'),
+            endTime: timeMatch[2].replace(',', '.'),
+            text: lines.slice(2).join('\n'),
+          });
+        }
+      }
+    });
+
+    return subtitles;
+  };
+
+  const handleApplySubtitles = async () => {
+    if (!videoFilename) {
+      toast({
+        title: "تنبيه",
+        description: "لا يوجد فيديو لتطبيق الترجمات عليه",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setApplying(true);
+    try {
+      const srtContent = subtitles.map((sub, index) => {
+        return `${index + 1}\n${sub.startTime} --> ${sub.endTime}\n${sub.text}\n`;
+      }).join('\n');
+
+      const blob = new Blob([srtContent], { type: 'text/plain' });
+      const file = new File([blob], 'subtitles.srt', { type: 'text/plain' });
+      
+      const subtitleFilename = await VideoAPI.uploadSubtitle(file);
+      
+      const outputFilename = `subtitled_${Date.now()}.mp4`;
+      const result = await VideoAPI.addSubtitles(
+        videoFilename,
+        subtitleFilename,
+        outputFilename,
+        {
+          fontsize: fontSize[0],
+          color: color,
+          position: position,
+        }
+      );
+
+      if (result.success && result.output_file) {
+        toast({
+          title: "نجح تطبيق الترجمات",
+          description: "تم إضافة الترجمات للفيديو بنجاح",
+        });
+        if (onVideoProcessed) {
+          onVideoProcessed(result.output_file);
+        }
+      } else {
+        throw new Error(result.error || "فشل تطبيق الترجمات");
+      }
+    } catch (err) {
+      toast({
+        title: "فشل تطبيق الترجمات",
+        description: err instanceof Error ? err.message : "حدث خطأ",
+        variant: "destructive",
+      });
+    } finally {
+      setApplying(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-card border-r border-border">
       <div className="flex items-center justify-between p-4 border-b border-border">
         <h3 className="font-semibold">محرر الترجمات</h3>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" data-testid="button-import-subtitle">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".srt,.vtt,.ass"
+            className="hidden"
+            onChange={handleImportSubtitle}
+          />
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={() => fileInputRef.current?.click()}
+            data-testid="button-import-subtitle"
+          >
             <Upload className="h-4 w-4 ml-1" />
             استيراد
           </Button>
-          <Button size="sm" variant="outline" data-testid="button-export-subtitle">
-            <Download className="h-4 w-4 ml-1" />
-            تصدير
+          <Button 
+            size="sm" 
+            variant="default" 
+            onClick={handleApplySubtitles}
+            disabled={applying || !videoFilename}
+            data-testid="button-apply-subtitle"
+          >
+            <Check className="h-4 w-4 ml-1" />
+            {applying ? "جاري التطبيق..." : "تطبيق"}
           </Button>
         </div>
       </div>
