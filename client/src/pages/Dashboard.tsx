@@ -2,9 +2,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProjectCard } from "@/components/ProjectCard";
+import { TemplateCard } from "@/components/TemplateCard";
 import { UploadDialog } from "@/components/UploadDialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Plus, Search, Grid3x3, List, Film } from "lucide-react";
+import { Plus, Search, Grid3x3, List, Film, Sparkles } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -85,6 +87,62 @@ export default function Dashboard() {
     });
   };
 
+  const templates = [
+    {
+      id: "1",
+      title: "فيديو ترويجي",
+      description: "قالب احترافي للفيديوهات الترويجية والإعلانات",
+      duration: "0:30",
+      category: "تسويق",
+    },
+    {
+      id: "2",
+      title: "عرض تقديمي",
+      description: "قالب مثالي للعروض التقديمية والشروحات",
+      duration: "1:00",
+      category: "تعليمي",
+    },
+    {
+      id: "3",
+      title: "وسائل تواصل اجتماعي",
+      description: "قالب مصمم خصيصاً لمنصات التواصل الاجتماعي",
+      duration: "0:15",
+      category: "سوشيال ميديا",
+    },
+    {
+      id: "4",
+      title: "قصة إنستغرام",
+      description: "قالب عمودي مناسب لقصص إنستغرام",
+      duration: "0:15",
+      category: "سوشيال ميديا",
+    },
+    {
+      id: "5",
+      title: "فيديو تعليمي",
+      description: "قالب شامل للدروس التعليمية والشروحات",
+      duration: "2:00",
+      category: "تعليمي",
+    },
+    {
+      id: "6",
+      title: "إعلان منتج",
+      description: "قالب احترافي لعرض المنتجات",
+      duration: "0:45",
+      category: "تسويق",
+    },
+  ];
+
+  const handleSelectTemplate = (id: string) => {
+    const template = templates.find(t => t.id === id);
+    if (template) {
+      toast({
+        title: `تم اختيار قالب: ${template.title}`,
+        description: `الفئة: ${template.category} • المدة: ${template.duration}`,
+      });
+    }
+    setUploadOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card sticky top-0 z-50">
@@ -108,23 +166,30 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-2xl font-bold mb-1">مشاريعي</h2>
-            <p className="text-sm text-muted-foreground">
-              {isLoading ? "جاري التحميل..." : `${filteredProjects.length} مشروع`}
-            </p>
+        <Tabs defaultValue="projects" className="w-full" dir="rtl">
+          <div className="flex items-center justify-between mb-6">
+            <TabsList>
+              <TabsTrigger value="projects" className="gap-2">
+                <Film className="h-4 w-4" />
+                مشاريعي
+              </TabsTrigger>
+              <TabsTrigger value="templates" className="gap-2">
+                <Sparkles className="h-4 w-4" />
+                القوالب الجاهزة
+              </TabsTrigger>
+            </TabsList>
+
+            <Button
+              onClick={() => setUploadOpen(true)}
+              size="lg"
+              data-testid="button-new-project"
+            >
+              <Plus className="h-5 w-5 ml-2" />
+              مشروع جديد
+            </Button>
           </div>
 
-          <Button
-            onClick={() => setUploadOpen(true)}
-            size="lg"
-            data-testid="button-new-project"
-          >
-            <Plus className="h-5 w-5 ml-2" />
-            مشروع جديد
-          </Button>
-        </div>
+          <TabsContent value="projects" className="space-y-6 mt-0">
 
         <div className="flex items-center gap-3 mb-6">
           <div className="flex-1 relative">
@@ -202,6 +267,31 @@ export default function Dashboard() {
             ))}
           </div>
         )}
+          </TabsContent>
+
+          <TabsContent value="templates" className="space-y-6 mt-0">
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-2">اختر قالباً للبدء</h3>
+              <p className="text-sm text-muted-foreground">
+                قوالب احترافية جاهزة للاستخدام توفر عليك الوقت والجهد
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {templates.map((template) => (
+                <TemplateCard
+                  key={template.id}
+                  id={template.id}
+                  title={template.title}
+                  description={template.description}
+                  duration={template.duration}
+                  category={template.category}
+                  onSelect={handleSelectTemplate}
+                />
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
 
       <UploadDialog
