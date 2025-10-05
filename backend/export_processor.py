@@ -1,4 +1,4 @@
-from moviepy import VideoFileClip
+from moviepy.editor import VideoFileClip
 from pathlib import Path
 import os
 

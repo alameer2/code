@@ -1,4 +1,4 @@
-from moviepy import VideoFileClip, TextClip, CompositeVideoClip, ImageClip
+from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip, ImageClip
 from pathlib import Path
 import os
 import numpy as np
