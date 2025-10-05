@@ -124,25 +124,37 @@ export function UploadDialog({ open, onOpenChange, projectId }: UploadDialogProp
       return res.json();
     },
     onSuccess: async (data) => {
-      if (projectId) {
-        await apiRequest("POST", "/api/files", {
-          projectId: projectId,
-          name: data.video.title || data.video.filename,
-          type: "video",
-          size: data.video.size,
-          url: `/uploads/${data.video.filename}`,
+      let targetProjectId = projectId;
+      
+      if (!targetProjectId) {
+        const res = await apiRequest("POST", "/api/projects", {
+          title: data.video.title || "مشروع YouTube",
+          status: "draft",
         });
+        const newProject = await res.json();
+        targetProjectId = newProject.id;
+      }
 
-        if (data.subtitle) {
-          await apiRequest("POST", "/api/files", {
-            projectId: projectId,
-            name: data.subtitle.filename,
-            type: "subtitle",
-            size: 0,
-            url: `/uploads/${data.subtitle.filename}`,
-          });
-        }
+      await apiRequest("POST", "/api/files", {
+        projectId: targetProjectId,
+        name: data.video.title || data.video.filename,
+        type: "video",
+        size: data.video.size,
+        url: `/uploads/${data.video.filename}`,
+      });
 
+      if (data.subtitle) {
+        await apiRequest("POST", "/api/files", {
+          projectId: targetProjectId,
+          name: data.subtitle.filename,
+          type: "subtitle",
+          size: 0,
+          url: `/uploads/${data.subtitle.filename}`,
+        });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      if (projectId) {
         queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "files"] });
       }
 
@@ -151,6 +163,10 @@ export function UploadDialog({ open, onOpenChange, projectId }: UploadDialogProp
       });
       onOpenChange(false);
       resetForm();
+      
+      if (!projectId) {
+        setLocation(`/editor?id=${targetProjectId}`);
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -180,15 +196,27 @@ export function UploadDialog({ open, onOpenChange, projectId }: UploadDialogProp
       return res.json();
     },
     onSuccess: async (data) => {
-      if (projectId) {
-        await apiRequest("POST", "/api/files", {
-          projectId: projectId,
-          name: data.filename,
-          type: data.filename.endsWith('.mp4') || data.filename.endsWith('.mov') ? "video" : "file",
-          size: data.size,
-          url: `/uploads/${data.filename}`,
+      let targetProjectId = projectId;
+      
+      if (!targetProjectId) {
+        const res = await apiRequest("POST", "/api/projects", {
+          title: data.filename.replace(/\.[^/.]+$/, "") || "مشروع Google Drive",
+          status: "draft",
         });
+        const newProject = await res.json();
+        targetProjectId = newProject.id;
+      }
 
+      await apiRequest("POST", "/api/files", {
+        projectId: targetProjectId,
+        name: data.filename,
+        type: data.filename.endsWith('.mp4') || data.filename.endsWith('.mov') ? "video" : "file",
+        size: data.size,
+        url: `/uploads/${data.filename}`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      if (projectId) {
         queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "files"] });
       }
 
@@ -197,6 +225,10 @@ export function UploadDialog({ open, onOpenChange, projectId }: UploadDialogProp
       });
       onOpenChange(false);
       resetForm();
+      
+      if (!projectId) {
+        setLocation(`/editor?id=${targetProjectId}`);
+      }
     },
     onError: (error: Error) => {
       toast({
