@@ -9,3 +9,5 @@ pydantic-settings==2.6.0
 aiofiles==24.1.0
 pillow==10.4.0
 numpy==1.26.4
+yt-dlp
+gdown

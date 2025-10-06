@@ -280,6 +280,11 @@ export function UploadDialog({ open, onOpenChange, projectId }: UploadDialogProp
     const selectedFile = projectFiles.find(f => f.id === selectedProjectFile);
     if (!selectedFile) return;
 
+    toast({
+      title: "تم اختيار الملف",
+      description: `الملف "${selectedFile.name}" جاهز للاستخدام`,
+    });
+
     onOpenChange(false);
     resetForm();
   };

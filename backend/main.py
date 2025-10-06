@@ -48,7 +48,7 @@ async def health_check():
         "python_version": "3.11"
     }
 
-@app.post("/api/video/upload")
+@app.post("/upload")
 async def upload_video(file: UploadFile = File(...)):
     try:
         file_extension = os.path.splitext(file.filename)[1]
@@ -388,11 +388,11 @@ async def add_sticker(
         raise HTTPException(status_code=500, detail=result.get("error"))
     return result
 
-@app.get("/api/effects/transitions")
+@app.get("/transitions")
 async def get_transitions():
     return {"transitions": content_library.get_available_transitions()}
 
-@app.get("/api/effects/filters")
+@app.get("/filters")
 async def get_filters():
     return {"filters": content_library.get_available_filters()}
 
