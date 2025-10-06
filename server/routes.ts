@@ -176,9 +176,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/import", createProxyMiddleware({
     target: "http://localhost:8000",
     changeOrigin: true,
-    pathRewrite: {
-      '^/api/import': '/api/import'
-    },
   }));
   
   app.use("/api/download", createProxyMiddleware({

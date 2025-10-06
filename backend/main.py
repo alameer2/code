@@ -403,7 +403,7 @@ async def download_file(filename: str):
         raise HTTPException(status_code=404, detail="الملف غير موجود")
     return FileResponse(file_path, filename=filename)
 
-@app.post("/api/import/youtube")
+@app.post("/youtube")
 async def import_from_youtube(
     url: str = Form(...),
     download_subtitles: bool = Form(True),
@@ -473,7 +473,7 @@ async def import_from_youtube(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"خطأ في تنزيل الفيديو: {str(e)}")
 
-@app.post("/api/import/gdrive")
+@app.post("/gdrive")
 async def import_from_google_drive(
     url: str = Form(...)
 ):
